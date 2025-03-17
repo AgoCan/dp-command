@@ -64,7 +64,7 @@ func Render3(p *ApplicationInfo, opt *RenderOpt, parameters *map[string]interfac
 
 	kv, err := chartutil.ParseKubeVersion(opt.KubeVersion)
 	if err != nil {
-		log.Println("解析KubeVersion %v失败", err)
+		log.Printf("解析KubeVersion %v失败", err)
 	}
 
 	// 创建一个 helm 配置对象
@@ -139,7 +139,7 @@ func Render3(p *ApplicationInfo, opt *RenderOpt, parameters *map[string]interfac
 		log.Fatalf("渲染chart:%s 失败详情: %v。", opt.ReleaseName, err)
 	}
 
-	log.Println("[%s]%s的helm3渲染后的yaml文件为%s", opt.Namespace, opt.ReleaseName, rel.Manifest)
+	log.Printf("[%v]%v的helm3渲染后的yaml文件为%v", opt.Namespace, opt.ReleaseName, rel.Manifest)
 
 	// 将结果输出为 yaml 格式
 	return rel.Manifest, nil
