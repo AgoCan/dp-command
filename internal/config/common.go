@@ -1,5 +1,5 @@
 package config
 
 type Common struct {
-	Common      string
+	Common string
 }

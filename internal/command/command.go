@@ -3,7 +3,7 @@ package command
 import (
 	"fmt"
 
-    "dp-command/internal/config"
+	"dp-command/internal/config"
 )
 
 type Command struct {

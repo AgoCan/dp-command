@@ -1,8 +1,8 @@
 package options
 
 import (
-	"dp-command/internal/config"
 	"dp-command/internal/command"
+	"dp-command/internal/config"
 )
 
 const (

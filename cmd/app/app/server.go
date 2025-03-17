@@ -15,7 +15,7 @@ func NewServerCommand() *cobra.Command {
 			return run(o)
 		},
 	}
-    // 指定配置参数
+	// 指定配置参数
 	cmd.Flags().StringVarP(&o.ConfFile, "config", "c", "", "Config file path.")
 	versionCmd := &cobra.Command{
 		Use:   "version",

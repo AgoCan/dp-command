@@ -29,7 +29,7 @@ func New(loadPath string) *Config {
 
 // Config 配置文件
 type Config struct {
-    Common Common
+	Common Common
 }
 
 // 获取文件绝对路径
