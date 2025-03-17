@@ -1,21 +1,31 @@
 package container
 
+import (
+	"log"
+	"os/exec"
+)
+
 // 利用exec进行执行
 type Exec interface {
-	Push()
-	Pull()
-	Tag()
+	Push(imageName string)
+	Pull(imageName string)
+	Tag(imageName string, newTag string)
 }
 
-func New(runType string) Exec {
+func New() Exec {
 	var e Exec
-	if runType == "containerd" {
-		e = newContainerd()
-	} else if runType == "docker" {
+	if commandExists("docker") {
 		e = newDocker()
+	} else if commandExists("ctr") {
+		e = newContainerd()
 	} else {
-
+		log.Fatalf("no found docker or ctr.")
 	}
 
 	return e
+}
+
+func commandExists(cmd string) bool {
+	_, err := exec.LookPath(cmd)
+	return err == nil
 }
