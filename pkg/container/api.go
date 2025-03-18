@@ -7,8 +7,8 @@ import (
 
 // 利用exec进行执行
 type Exec interface {
-	Push(imageName string)
-	Pull(imageName string)
+	Push(imageName string) error
+	Pull(imageName string) error
 	Tag(imageName string, newTag string)
 }
 

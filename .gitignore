@@ -1,3 +1,2 @@
 kubeconfig
-k8s-test-data
-utils-test-data
+*-test-data
