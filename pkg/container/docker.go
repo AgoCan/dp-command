@@ -2,12 +2,12 @@ package container
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"os"
-	"os/exec"
 	"regexp"
 	"strings"
 
@@ -18,11 +18,13 @@ import (
 )
 
 type Docker struct {
-	Client *client.Client
+	Client  *client.Client
+	AuthStr string `json:"authStr"`
 }
 
 type PullResponse struct {
-	Status string `json:"status"`
+	Status      string         `json:"status"`
+	ErrorDetail map[string]any `json:"errorDetail"`
 }
 
 func newDocker() *Docker {
@@ -30,24 +32,31 @@ func newDocker() *Docker {
 	if err != nil {
 		log.Fatalf("Failed connect docker")
 	}
-	return &Docker{
-		Client: cli,
+	authConfig := registry.AuthConfig{
+		Username:      "admin",          // 替换为你的用户名
+		Password:      "Ctx1ytxA@3zdj",  // 替换为你的密码
+		ServerAddress: "reg.safedog.cn", // 替换为你的镜像仓库地址，包括端口号，例如 "registry.example.com:80" 或 "registry.example.com:443"
 	}
-}
-
-func (d *Docker) Login(ctx context.Context, cli *client.Client, username, password, serverAddress string) (registry.AuthenticateOKBody, error) {
-	auth, err := cli.RegistryLogin(ctx, registry.AuthConfig{
-		Username:      username,
-		Password:      password,
-		ServerAddress: serverAddress,
-	})
-	return auth, err
+	_, err = cli.RegistryLogin(context.TODO(), authConfig)
+	if err != nil {
+		log.Fatalf("Failed loggin docker")
+	}
+	encodedJSON, err := json.Marshal(authConfig)
+	if err != nil {
+		log.Fatalf("Error encoding auth config: %v", err)
+	}
+	return &Docker{
+		Client:  cli,
+		AuthStr: base64.URLEncoding.EncodeToString(encodedJSON),
+	}
 }
 
 // Pull pulls an image from a specified repository using docker command.
 
 func (d *Docker) Pull(imageName string) (err error) {
-	out, err := d.Client.ImagePull(context.Background(), imageName, types.ImagePullOptions{})
+	out, err := d.Client.ImagePull(context.Background(), imageName, types.ImagePullOptions{
+		RegistryAuth: d.AuthStr,
+	})
 	if err != nil {
 		return err
 	}
@@ -75,19 +84,37 @@ func (d *Docker) Pull(imageName string) (err error) {
 
 // Tag tags an existing image with a new tag using docker command.
 func (d *Docker) Tag(imageName string, newTag string) {
-	if err := exec.Command("docker", "tag", imageName, newTag).Run(); err != nil {
-		log.Fatalf("Failed to tag image %s as %s: %v", imageName, newTag, err)
+	if err := d.Client.ImageTag(context.Background(), imageName, newTag); err != nil {
+		log.Fatalf("err: %v", err)
 	}
-	log.Printf("Image %s tagged as %s successfully.", imageName, newTag)
 }
 
 // Push pushes a tagged image to a specified repository using docker command.
 func (d *Docker) Push(imageName string) (err error) {
-	_, err = d.Client.ImagePush(context.Background(), imageName, types.ImagePushOptions{})
+	out, err := d.Client.ImagePush(context.Background(), imageName, types.ImagePushOptions{
+		RegistryAuth: d.AuthStr,
+	})
 	if err != nil {
-		log.Fatalf("Failed push image %v", imageName)
+		log.Fatalf("Failed push image %v,err: %v", imageName, err)
 	}
+	defer out.Close()
+	decoder := json.NewDecoder(out)
+	for {
+		var response PullResponse
+		if err := decoder.Decode(&response); err != nil {
+			if err == io.EOF {
+				// 读取结束
+				break
+			}
+			log.Printf("读取输出时出错: %v", err)
+			return err
+		}
 
+		// 打印拉取镜像的名称（status 字段包含了镜像名称）
+		if response.ErrorDetail != nil {
+			log.Printf("push输出时出错: %v", response.ErrorDetail)
+		}
+	}
 	return err
 }
 
@@ -132,8 +159,8 @@ func (d *Docker) LoadAndPush(filePath string, repo string) (err error) {
 	for _, v := range loadedImages {
 		newStringList := strings.Split(v, "/")
 		newString := fmt.Sprintf("%v/%v", repo, newStringList[len(newStringList)-1])
+		d.Tag(v, newString)
 		d.Push(newString)
-		fmt.Println("newString", newString)
 	}
 
 	return nil
